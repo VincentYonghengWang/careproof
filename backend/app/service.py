@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import re
+from typing import Awaitable, TypeVar
 
 from .clients import ClinicalTrialsClient, PubMedClient
 from .config import get_settings
@@ -160,6 +161,8 @@ STATIC_TRIAL_FALLBACKS: dict[str, list[dict]] = {
     ],
 }
 
+T = TypeVar("T")
+
 
 def _normalize_question(question: str) -> str:
     normalized = question.lower().strip()
@@ -211,6 +214,13 @@ def _build_visual_data(evidence: list[EvidenceItem]) -> dict:
     }
 
 
+async def _safe_fetch(factory: Awaitable[T], fallback: T) -> T:
+    try:
+        return await factory
+    except Exception:
+        return fallback
+
+
 async def build_answer(question: str, role: RoleName) -> AnswerPayload:
     settings = get_settings()
     pubmed_client = PubMedClient()
@@ -219,10 +229,10 @@ async def build_answer(question: str, role: RoleName) -> AnswerPayload:
     topic_key = _topic_key(normalized_question)
 
     pmids, trials = await asyncio.gather(
-        pubmed_client.search(normalized_question or question, settings.pubmed_max_results),
-        trials_client.search(normalized_question or question, settings.trials_max_results),
+        _safe_fetch(pubmed_client.search(normalized_question or question, settings.pubmed_max_results), []),
+        _safe_fetch(trials_client.search(normalized_question or question, settings.trials_max_results), []),
     )
-    pubmed_items = await pubmed_client.fetch(pmids)
+    pubmed_items = await _safe_fetch(pubmed_client.fetch(pmids), [])
     if not pubmed_items and topic_key:
         pubmed_items = STATIC_PUBMED_FALLBACKS.get(topic_key, [])
     if not trials and topic_key:
