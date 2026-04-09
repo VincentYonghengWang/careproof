@@ -1,4 +1,4 @@
-import { useEffect, useState, type ChangeEvent } from "react";
+import { useEffect, useState, type ChangeEvent, type SVGProps } from "react";
 
 type Role = "owner" | "doctor" | "pharma" | "patient";
 type UploadCategory = "pdf" | "word" | "image" | "other";
@@ -66,6 +66,8 @@ const ROLE_LABELS: Record<Role, string> = {
   patient: "Patient"
 };
 
+const ROLE_ORDER: Role[] = ["patient", "doctor", "pharma", "owner"];
+
 const EXAMPLE_QUESTIONS = [
   "What is the current evidence for GLP-1 receptor agonists in obesity management?",
   "Are there active clinical trials for CAR-T therapy in lupus?",
@@ -75,8 +77,77 @@ const EXAMPLE_QUESTIONS = [
 
 const API_BASE = "http://localhost:8000";
 
+function PlusIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" {...props}>
+      <path d="M12 4v16" />
+      <path d="M4 12h16" />
+    </svg>
+  );
+}
+
+function GlobeIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M3 12h18" />
+      <path d="M12 3a15 15 0 0 1 0 18" />
+      <path d="M12 3a15 15 0 0 0 0 18" />
+    </svg>
+  );
+}
+
+function SparkleIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" {...props}>
+      <path d="M12 3l1.8 4.6L18 9.4l-4.2 1.6L12 16l-1.8-5L6 9.4l4.2-1.8L12 3Z" />
+      <path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15Z" />
+    </svg>
+  );
+}
+
+function RouteIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" {...props}>
+      <circle cx="6" cy="18" r="2" />
+      <circle cx="18" cy="6" r="2" />
+      <path d="M8 18h5a3 3 0 0 0 3-3V8" />
+      <path d="m13 8 3-3 3 3" />
+    </svg>
+  );
+}
+
+function RingIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" {...props}>
+      <circle cx="12" cy="12" r="8" />
+      <circle cx="12" cy="12" r="4.5" />
+    </svg>
+  );
+}
+
+function MicIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" {...props}>
+      <rect x="9" y="3" width="6" height="11" rx="3" />
+      <path d="M6 11a6 6 0 0 0 12 0" />
+      <path d="M12 17v4" />
+      <path d="M8 21h8" />
+    </svg>
+  );
+}
+
+function SendIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" {...props}>
+      <path d="M12 19V5" />
+      <path d="m5 12 7-7 7 7" />
+    </svg>
+  );
+}
+
 function App() {
-  const [role, setRole] = useState<Role>("doctor");
+  const [role, setRole] = useState<Role>("patient");
   const [question, setQuestion] = useState(EXAMPLE_QUESTIONS[0]);
   const [dashboard, setDashboard] = useState<DashboardPayload | null>(null);
   const [answer, setAnswer] = useState<AnswerPayload | null>(null);
@@ -85,7 +156,7 @@ function App() {
   const [dashboardLoading, setDashboardLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
-  const [statusMessage, setStatusMessage] = useState<string>("Audio input is ready when ElevenLabs is configured.");
+  const [statusMessage, setStatusMessage] = useState<string>("Ask anything with text, voice, PDF, Word, or images.");
   const [recording, setRecording] = useState(false);
 
   useEffect(() => {
@@ -116,6 +187,8 @@ function App() {
       const data = (await response.json()) as AnswerPayload;
       setAnswer(data);
       setStatusMessage("Evidence retrieval complete.");
+    } catch (error) {
+      setStatusMessage("CareProof could not complete the evidence run.");
     } finally {
       setLoading(false);
     }
@@ -140,7 +213,7 @@ function App() {
         throw new Error("Upload failed");
       }
       setUploadedFiles(data.files);
-      setStatusMessage("Files uploaded. You can now ask a question with document context.");
+      setStatusMessage("Files uploaded. Add your question and run proof.");
     } catch (error) {
       setStatusMessage("Upload failed. Please use PDF, Word, or image files.");
     } finally {
@@ -212,13 +285,13 @@ function App() {
           <div className="brand-kicker">Evidence-grounded clinical intelligence</div>
           <h1>CareProof</h1>
           <p>
-            A dual-source clinical evidence demo that retrieves from PubMed and
-            ClinicalTrials.gov, then adapts the experience for different stakeholders.
+            A dual-source clinical evidence workspace with a chat-style composer,
+            role-aware views, and live evidence cards.
           </p>
         </div>
 
         <div className="role-switcher">
-          {(["patient", "doctor", "pharma", "owner"] as Role[]).map((item) => (
+          {ROLE_ORDER.map((item) => (
             <button
               key={item}
               className={item === role ? "role-button active" : "role-button"}
@@ -231,7 +304,7 @@ function App() {
         </div>
 
         <div className="question-panel">
-          <div className="panel-title">Demo Prompts</div>
+          <div className="panel-title">Example Questions</div>
           {EXAMPLE_QUESTIONS.map((item) => (
             <button
               key={item}
@@ -245,72 +318,23 @@ function App() {
         </div>
       </aside>
 
-      <main className="main-grid">
-        <section className="hero-card">
-          <div className="hero-copy">
-            <div className="eyebrow">{ROLE_LABELS[role]} facing experience</div>
-            <h2>{dashboard?.title ?? "Loading role view..."}</h2>
-            <p>{dashboardLoading ? "Loading workspace context..." : dashboard?.summary}</p>
+      <main className="workspace">
+        <section className="results-column">
+          <div className="hero-card">
+            <div className="hero-copy">
+              <div className="eyebrow">{ROLE_LABELS[role]} facing experience</div>
+              <h2>{dashboard?.title ?? "Loading role view..."}</h2>
+              <p>{dashboardLoading ? "Loading workspace context..." : dashboard?.summary}</p>
+            </div>
+            <div className="hero-meta">
+              <div className="meta-badge">Model path: Qwen3.5-ready</div>
+              <div className="meta-badge">Sources: PubMed + ClinicalTrials.gov</div>
+              <div className="meta-badge">Safety: Non-diagnostic by design</div>
+            </div>
           </div>
-          <div className="hero-meta">
-            <div className="meta-badge">Model path: Qwen3.5-ready</div>
-            <div className="meta-badge">Sources: PubMed + ClinicalTrials.gov</div>
-            <div className="meta-badge">Safety: Non-diagnostic by design</div>
-          </div>
-        </section>
 
-        <section className="chat-card">
-          <div className="panel-header">
-            <div>
-              <div className="panel-title">Clinical Question</div>
-              <div className="panel-subtitle">
-                The backend retrieves both required sources before answering.
-              </div>
-            </div>
-          </div>
-          <textarea
-            value={question}
-            onChange={(event) => setQuestion(event.target.value)}
-            className="question-input"
-          />
-          <div className="composer-tools">
-            <label className="upload-button" htmlFor="file-upload">
-              {uploading ? "Uploading..." : "Upload Word / PDF / Images"}
-            </label>
-            <input
-              id="file-upload"
-              type="file"
-              className="hidden-input"
-              multiple
-              accept=".pdf,.doc,.docx,image/*"
-              onChange={handleUpload}
-            />
-          </div>
-          {uploadedFiles.length > 0 ? (
-            <div className="upload-list">
-              {uploadedFiles.map((item) => (
-                <div key={`${item.name}-${item.size_bytes}`} className="upload-pill">
-                  {item.category}: {item.name}
-                </div>
-              ))}
-            </div>
-          ) : null}
-          <div className="composer-actions">
-            <button
-              className={recording ? "secondary-button recording" : "secondary-button"}
-              type="button"
-              onClick={handleAudioInput}
-              disabled={transcribing}
-            >
-              {transcribing ? "Audio..." : "Ask by Audio"}
-            </button>
-            <button className="primary-button" type="button" onClick={submitQuestion} disabled={loading}>
-              {loading ? "Retrieving evidence..." : "Run Proof"}
-            </button>
-          </div>
-          <div className="status-line">{statusMessage}</div>
           {answer ? (
-            <div className="answer-block">
+            <section className="answer-card">
               <div className="role-brief">{answer.role_brief}</div>
               <h3>Direct Answer</h3>
               <p>{answer.direct_answer}</p>
@@ -324,92 +348,148 @@ function App() {
                   </span>
                 ))}
               </div>
-            </div>
+            </section>
           ) : (
-            <div className="empty-state">
-              Choose a role, pick one of the company-required examples, and run the demo.
-            </div>
+            <section className="empty-state large">
+              Result cards will appear here. Pick a role, use one of the example prompts or ask your own question, then run proof.
+            </section>
           )}
-        </section>
 
-        <section className="metrics-card">
-          <div className="panel-title">Role Dashboard</div>
-          <div className="metric-grid">
-            {dashboard?.metrics.map((metric) => (
-              <div key={metric.label} className="metric-item">
-                <div className="metric-label">{metric.label}</div>
-                <div className="metric-value">{metric.value}</div>
-                <div className="metric-delta">{metric.delta}</div>
+          <section className="dashboard-grid">
+            <section className="metrics-card">
+              <div className="panel-title">Role Dashboard</div>
+              <div className="metric-grid">
+                {dashboard?.metrics.map((metric) => (
+                  <div key={metric.label} className="metric-item">
+                    <div className="metric-label">{metric.label}</div>
+                    <div className="metric-value">{metric.value}</div>
+                    <div className="metric-delta">{metric.delta}</div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-          <div className="highlights-list">
-            {dashboard?.highlights.map((highlight) => (
-              <div key={highlight} className="highlight-row">
-                {highlight}
+              <div className="highlights-list">
+                {dashboard?.highlights.map((highlight) => (
+                  <div key={highlight} className="highlight-row">
+                    {highlight}
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </section>
+            </section>
 
-        <section className="visual-card">
-          <div className="panel-header">
-            <div>
+            <section className="visual-card">
               <div className="panel-title">Evidence Snapshot</div>
-              <div className="panel-subtitle">A lightweight owner/doctor/pharma/patient visual layer.</div>
-            </div>
-          </div>
-          <div className="bars">
-            {(answer?.visual_data.evidenceStrength ?? []).map((item) => (
-              <div key={item.label} className="bar-row">
-                <span>{item.label}</span>
-                <div className="bar-track">
-                  <div className="bar-fill" style={{ width: `${Math.min(item.value * 18, 100)}%` }} />
-                </div>
-                <strong>{item.value}</strong>
+              <div className="bars">
+                {(answer?.visual_data.evidenceStrength ?? []).map((item) => (
+                  <div key={item.label} className="bar-row">
+                    <span>{item.label}</span>
+                    <div className="bar-track">
+                      <div className="bar-fill" style={{ width: `${Math.min(item.value * 18, 100)}%` }} />
+                    </div>
+                    <strong>{item.value}</strong>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </section>
+          </section>
+
+          <section className="evidence-card">
+            <div className="panel-title">Supporting Evidence</div>
+            <div className="evidence-list">
+              {answer?.supporting_evidence.map((item) => (
+                <article key={`${item.source}-${item.id}`} className="evidence-item">
+                  <div className="evidence-topline">
+                    <span className="source-tag">{item.source}</span>
+                    <span className="evidence-id">{item.id}</span>
+                    {item.phase ? <span className="status-tag">{item.phase}</span> : null}
+                    {item.status ? <span className="status-tag">{item.status}</span> : null}
+                  </div>
+                  <h4>{item.title}</h4>
+                  <p>{item.summary}</p>
+                  {item.url ? (
+                    <a href={item.url} target="_blank" rel="noreferrer">
+                      Open source
+                    </a>
+                  ) : null}
+                </article>
+              )) ?? <div className="empty-state">Evidence cards appear after running a question.</div>}
+            </div>
+          </section>
         </section>
 
-        <section className="evidence-card">
-          <div className="panel-header">
-            <div>
-              <div className="panel-title">Supporting Evidence</div>
-              <div className="panel-subtitle">
-                Every answer shows source identifiers from both required systems.
+        <div className="composer-dock">
+          {uploadedFiles.length > 0 ? (
+            <div className="upload-list">
+              {uploadedFiles.map((item) => (
+                <div key={`${item.name}-${item.size_bytes}`} className="upload-pill">
+                  {item.category}: {item.name}
+                </div>
+              ))}
+            </div>
+          ) : null}
+
+          <div className="status-line">{statusMessage}</div>
+
+          <section className="composer-card">
+            <textarea
+              value={question}
+              onChange={(event) => setQuestion(event.target.value)}
+              className="question-input chatgpt-style"
+              placeholder="Ask anything"
+            />
+
+            <div className="composer-toolbar">
+              <div className="composer-left">
+                <label className="icon-button" htmlFor="file-upload" title="Upload files">
+                  <PlusIcon className="toolbar-icon" />
+                </label>
+                <input
+                  id="file-upload"
+                  type="file"
+                  className="hidden-input"
+                  multiple
+                  accept=".pdf,.doc,.docx,image/*"
+                  onChange={handleUpload}
+                />
+                <button className="icon-button" type="button" title="Connected sources">
+                  <GlobeIcon className="toolbar-icon" />
+                </button>
+                <button className="icon-button" type="button" title="Evidence mode">
+                  <SparkleIcon className="toolbar-icon" />
+                </button>
+                <button className="icon-button" type="button" title="Structured retrieval">
+                  <RouteIcon className="toolbar-icon" />
+                </button>
+                <button className="mode-pill" type="button">
+                  Auto
+                </button>
+              </div>
+
+              <div className="composer-right">
+                <button className="icon-button" type="button" title="Focus mode">
+                  <RingIcon className="toolbar-icon" />
+                </button>
+                <button
+                  className={recording ? "icon-button recording" : "icon-button"}
+                  type="button"
+                  title="Ask by audio"
+                  onClick={handleAudioInput}
+                  disabled={transcribing}
+                >
+                  <MicIcon className="toolbar-icon" />
+                </button>
+                <button
+                  className="send-button"
+                  type="button"
+                  title="Run Proof"
+                  onClick={submitQuestion}
+                  disabled={loading || uploading}
+                >
+                  <SendIcon className="toolbar-icon send-icon" />
+                </button>
               </div>
             </div>
-          </div>
-          <div className="evidence-list">
-            {answer?.supporting_evidence.map((item) => (
-              <article key={`${item.source}-${item.id}`} className="evidence-item">
-                <div className="evidence-topline">
-                  <span className="source-tag">{item.source}</span>
-                  <span className="evidence-id">{item.id}</span>
-                  {item.phase ? <span className="status-tag">{item.phase}</span> : null}
-                  {item.status ? <span className="status-tag">{item.status}</span> : null}
-                </div>
-                <h4>{item.title}</h4>
-                <p>{item.summary}</p>
-                {item.url ? (
-                  <a href={item.url} target="_blank" rel="noreferrer">
-                    Open source
-                  </a>
-                ) : null}
-              </article>
-            )) ?? <div className="empty-state">Evidence cards appear after running a question.</div>}
-          </div>
-        </section>
-
-        <section className="footer-card">
-          <div className="panel-title">Safety Boundary</div>
-          <p>
-            CareProof is designed for evidence review and explanation. It does not provide
-            diagnosis, treatment decisions, or dosing recommendations. Clinical decisions
-            should be made by licensed professionals.
-          </p>
-        </section>
+          </section>
+        </div>
       </main>
     </div>
   );
