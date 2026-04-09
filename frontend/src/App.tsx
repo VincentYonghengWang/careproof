@@ -5,7 +5,7 @@ type UploadCategory = "pdf" | "word" | "image" | "other";
 type AuthMode = "login" | "register";
 type MessageSender = "user" | "assistant";
 type ThemeMode = "light" | "dark";
-type LlmModel = "Gemini 3.1" | "GPT-5.3" | "Opus 4.6";
+type LlmModel = "Gemini 3.1" | "GPT-5.3" | "Opus 4.6" | "Qwen 3.5 Free";
 
 type MetricCard = {
   label: string;
@@ -2019,6 +2019,7 @@ function App() {
                     <option value="Gemini 3.1">Gemini 3.1</option>
                     <option value="GPT-5.3">GPT-5.3</option>
                     <option value="Opus 4.6">Opus 4.6</option>
+                    <option value="Qwen 3.5 Free">Qwen 3.5 Free</option>
                   </select>
                 </label>
               </div>
