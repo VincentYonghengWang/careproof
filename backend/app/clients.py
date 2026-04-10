@@ -6,6 +6,13 @@ from html import unescape
 from xml.etree import ElementTree
 
 
+def _split_sentences(text: str) -> list[str]:
+    text = re.sub(r"\s+", " ", text).strip()
+    if not text:
+        return []
+    return [part.strip() for part in re.split(r"(?<=[.!?])\s+", text) if part.strip()]
+
+
 class PubMedClient:
     BASE = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
 
@@ -39,10 +46,21 @@ class PubMedClient:
         for article in root.findall(".//PubmedArticle"):
             pmid = article.findtext(".//PMID") or ""
             title = "".join(article.find(".//ArticleTitle").itertext()) if article.find(".//ArticleTitle") is not None else "Untitled article"
-            abstract_parts = [
-                "".join(node.itertext()).strip()
-                for node in article.findall(".//Abstract/AbstractText")
-            ]
+            abstract_parts = []
+            abstract_sections = []
+            for node in article.findall(".//Abstract/AbstractText"):
+                text = "".join(node.itertext()).strip()
+                if not text:
+                    continue
+                label = node.attrib.get("Label") or node.attrib.get("NlmCategory")
+                abstract_parts.append(text)
+                abstract_sections.append(
+                    {
+                        "label": label,
+                        "text": text,
+                        "sentences": _split_sentences(text),
+                    }
+                )
             year_text = article.findtext(".//PubDate/Year")
             authors = []
             for author in article.findall(".//Author"):
@@ -50,6 +68,11 @@ class PubMedClient:
                 initials = author.findtext("Initials")
                 if last_name:
                     authors.append(f"{last_name} {initials or ''}".strip())
+            publication_types = [
+                node.text.strip()
+                for node in article.findall(".//PublicationTypeList/PublicationType")
+                if node.text and node.text.strip()
+            ]
             articles.append(
                 {
                     "id": f"PMID:{pmid}",
@@ -58,6 +81,8 @@ class PubMedClient:
                     "year": int(year_text) if year_text and year_text.isdigit() else None,
                     "url": f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/" if pmid else None,
                     "authors": authors[:5],
+                    "publication_types": publication_types,
+                    "abstract_sections": abstract_sections,
                 }
             )
         return articles

@@ -20,13 +20,32 @@ class EvidenceItem(BaseModel):
     status: str | None = None
     phase: str | None = None
     evidence_type: str | None = None
+    sample_size: str | None = None
+    effect_size: str | None = None
+    p_value: str | None = None
+    evidence_level: str | None = None
+
+
+class CitationSpan(BaseModel):
+    source_id: str
+    source: Literal["PubMed", "ClinicalTrials.gov"]
+    title: str
+    snippet: str
+    section: str | None = None
+    support_type: Literal["abstract-snippet", "trial-summary", "summary-snippet"] = "summary-snippet"
+    figure_label: str | None = None
+    table_label: str | None = None
+    evidence_level: str | None = None
 
 
 class AnswerPayload(BaseModel):
     direct_answer: str
     supporting_evidence: list[EvidenceItem]
     citations: list[str]
+    claim_citations: list[CitationSpan] = Field(default_factory=list)
     uncertainty_note: str
+    verifier_notes: list[str] = Field(default_factory=list)
+    safety_notes: list[str] = Field(default_factory=list)
     role_brief: str
     visual_data: dict
 

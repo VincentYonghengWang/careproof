@@ -351,10 +351,60 @@ a:hover {
 .bar-stack,
 .history-snippets,
 .simple-card-grid,
-.comparison-grid,
-.doctor-table {
+.comparison-grid {
   display: grid;
   gap: 10px;
+}
+
+.doctor-table-wrap {
+  overflow-x: auto;
+  max-width: 100%;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.doctor-evidence-table {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+  font-size: 0.94rem;
+}
+
+.doctor-evidence-table th,
+.doctor-evidence-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+
+.doctor-evidence-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--sidebar);
+  color: var(--ink);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-bottom: 2px solid var(--brand);
+  white-space: nowrap;
+}
+
+.doctor-evidence-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.inline-citation-link {
+  color: var(--brand-strong);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.inline-citation-link:hover {
+  color: var(--brand);
 }
 
 .role-chip {
@@ -546,6 +596,18 @@ a:hover {
   border: 1px solid transparent;
 }
 
+a.citation-pill,
+.citation-link {
+  text-decoration: none;
+  cursor: pointer;
+}
+
+a.citation-pill:hover,
+.citation-link:hover {
+  border-color: rgba(15, 118, 110, 0.24);
+  background: rgba(15, 118, 110, 0.14);
+}
+
 .status-chip.danger,
 .grade-chip,
 .bar-fill.negative,
@@ -661,6 +723,12 @@ a:hover {
   border-radius: 24px;
 }
 
+.panel-divider {
+  height: 1px;
+  margin: 16px 0;
+  background: var(--line);
+}
+
 .large-panel {
   padding: 22px;
 }
@@ -740,7 +808,9 @@ a:hover {
 .soft-upload-grid,
 .doctor-workbench,
 .chart-cluster,
-.owner-overview-grid {
+.owner-overview-grid,
+.doctor-module-grid,
+.doctor-privacy-strip {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
@@ -757,6 +827,7 @@ a:hover {
 .placeholder-card,
 .simple-health-card,
 .soft-row-card,
+.doctor-module-card,
 .history-snippet,
 .mock-chart-card,
 .comparison-card,
@@ -775,6 +846,7 @@ a:hover {
 :root[data-theme="dark"] .placeholder-card,
 :root[data-theme="dark"] .simple-health-card,
 :root[data-theme="dark"] .soft-row-card,
+:root[data-theme="dark"] .doctor-module-card,
 :root[data-theme="dark"] .history-snippet,
 :root[data-theme="dark"] .mock-chart-card,
 :root[data-theme="dark"] .comparison-card,
@@ -788,6 +860,7 @@ a:hover {
 .hint-card strong,
 .upload-preview-card strong,
 .placeholder-card strong,
+.doctor-module-card strong,
 .history-snippet strong,
 .mock-chart-card strong,
 .comparison-card strong,
@@ -829,6 +902,72 @@ a:hover {
   margin-top: 0;
 }
 
+.doctor-module-card,
+.compact-row-card {
+  display: grid;
+  gap: 10px;
+}
+
+.doctor-module-card p,
+.compact-row-card span {
+  margin: 0;
+  line-height: 1.6;
+}
+
+.row-card-topline {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.row-card-subtitle {
+  color: var(--brand-strong);
+  font-size: 0.92rem;
+}
+
+.module-detail {
+  padding-top: 2px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.module-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 10px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.module-badge.good {
+  background: rgba(15, 118, 110, 0.1);
+  color: var(--brand-strong);
+}
+
+.module-badge.warn {
+  background: rgba(209, 138, 57, 0.14);
+  color: #8c6110;
+}
+
+.module-badge.neutral {
+  background: rgba(120, 128, 142, 0.12);
+  color: var(--muted);
+}
+
+:root[data-theme="dark"] .module-badge.warn {
+  color: #f2c979;
+}
+
+.benchmark-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
 .patient-disclaimer {
   padding: 16px 18px;
   border-radius: 18px;
@@ -868,19 +1007,6 @@ a:hover {
 
 .owner-stat-card strong {
   font-size: 2rem;
-}
-
-.doctor-table-row {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 8px;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--line);
-  font-size: 0.94rem;
-}
-
-.doctor-table-row:last-child {
-  border-bottom: none;
 }
 
 .bar-row,
@@ -1135,6 +1261,8 @@ a:hover {
   justify-content: center;
   border-radius: 999px;
   font-weight: 800;
+  font-size: 0.95rem;
+  line-height: 1;
 }
 
 .risk-icon.low {
@@ -1412,7 +1540,9 @@ a:hover {
   .owner-overview-grid,
   .soft-upload-grid,
   .doctor-workbench,
-  .chart-cluster {
+  .chart-cluster,
+  .doctor-module-grid,
+  .doctor-privacy-strip {
     grid-template-columns: 1fr;
   }
 

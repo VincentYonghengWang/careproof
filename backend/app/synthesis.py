@@ -24,14 +24,21 @@ def _topic_key(question: str) -> str | None:
     return None
 
 
-def _evidence_snippets(evidence: list[EvidenceItem]) -> tuple[list[str], list[str]]:
-    pubmed_titles = [item.title for item in evidence if item.source == "PubMed"][:2]
-    trial_titles = [item.title for item in evidence if item.source == "ClinicalTrials.gov"][:2]
-    return pubmed_titles, trial_titles
+def _example_snippet_lines(evidence: list[EvidenceItem]) -> list[str]:
+    """Include PMID/NCT ids so the UI can turn citations into real links."""
+    lines: list[str] = []
+    pubmed_items = [item for item in evidence if item.source == "PubMed"][:2]
+    if pubmed_items:
+        parts = [f"{item.id} ({item.title})" for item in pubmed_items]
+        lines.append(f"PubMed examples: {', '.join(parts)}.")
+    trial_items = [item for item in evidence if item.source == "ClinicalTrials.gov"][:2]
+    if trial_items:
+        parts = [f"{item.id} ({item.title})" for item in trial_items]
+        lines.append(f"ClinicalTrials.gov examples: {', '.join(parts)}.")
+    return lines
 
 
 def _build_fallback_answer(question: str, role: str, evidence: list[EvidenceItem]) -> tuple[str, str]:
-    pubmed_titles, trial_titles = _evidence_snippets(evidence)
     topic = _topic_key(question)
     pubmed_count = len([item for item in evidence if item.source == "PubMed"])
     trial_count = len([item for item in evidence if item.source == "ClinicalTrials.gov"])
@@ -93,10 +100,7 @@ def _build_fallback_answer(question: str, role: str, evidence: list[EvidenceItem
         )
 
     snippets: list[str] = []
-    if pubmed_titles:
-        snippets.append(f"PubMed examples: {', '.join(pubmed_titles)}.")
-    if trial_titles:
-        snippets.append(f"ClinicalTrials.gov examples: {', '.join(trial_titles)}.")
+    snippets.extend(_example_snippet_lines(evidence))
     if snippets:
         direct_answer = f"{direct_answer} {' '.join(snippets)}"
 
@@ -125,7 +129,10 @@ async def synthesize_answer(
 
     system_prompt = (
         "You are CareProof, an evidence-grounded clinical evidence assistant. "
-        "Use only the provided evidence. Cite PMID or NCT identifiers in the answer. "
+        "Use only the provided evidence. When mentioning a paper or trial, ALWAYS include its "
+        "identifier exactly as given (PMID:########## or NCT########) so citations can link out. "
+        "This applies to ALL roles including patient — always include PMID and NCT identifiers "
+        "even in plain-language answers. "
         "Do not diagnose. Do not provide dosing recommendations. "
         "Always include a short uncertainty note. "
         "Adapt tone for the requested role. Keep output concise."

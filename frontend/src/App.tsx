@@ -1,4 +1,13 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type SVGProps } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+  type ReactNode,
+  type SVGProps
+} from "react";
 
 type Role = "owner" | "doctor" | "pharma" | "patient";
 type UploadCategory = "pdf" | "word" | "image" | "other";
@@ -31,13 +40,32 @@ type EvidenceItem = {
   status?: string | null;
   phase?: string | null;
   evidence_type?: string | null;
+  sample_size?: string | null;
+  effect_size?: string | null;
+  p_value?: string | null;
+  evidence_level?: string | null;
+};
+
+type CitationSpan = {
+  source_id: string;
+  source: "PubMed" | "ClinicalTrials.gov";
+  title: string;
+  snippet: string;
+  section?: string | null;
+  support_type: "abstract-snippet" | "trial-summary" | "summary-snippet";
+  figure_label?: string | null;
+  table_label?: string | null;
+  evidence_level?: string | null;
 };
 
 type AnswerPayload = {
   direct_answer: string;
   supporting_evidence: EvidenceItem[];
   citations: string[];
+  claim_citations: CitationSpan[];
   uncertainty_note: string;
+  verifier_notes: string[];
+  safety_notes: string[];
   role_brief: string;
   visual_data: {
     evidenceStrength: { label: string; value: number }[];
@@ -148,7 +176,7 @@ const ROLE_COPY: Record<Role, RoleCopy> = {
   },
   doctor: {
     title: "Clinical decision support workspace",
-    subtitle: "Traceable evidence, claim-level citations, and conflict-aware synthesis.",
+    subtitle: "Dense evidence review, multimodal case intake, and defensible clinical synthesis.",
     helper: "Designed for dense evidence review, PICO framing, and defensible notes.",
     inputPlaceholder: "Example: GLP-1 in obesity",
     runProofLabel: "Run Proof for evidence retrieval",
@@ -222,6 +250,129 @@ const DOCTOR_PICO = [
 const DOCTOR_CONFLICT_BARS = [
   { label: "FOR", value: 78, count: 12 },
   { label: "AGAINST", value: 34, count: 5 }
+];
+
+const DOCTOR_IMPORT_MODULES = [
+  {
+    title: "Chat history import",
+    body: "Upload Claude, ChatGPT, or Grok JSON exports and turn them into structured longitudinal context for the case.",
+    status: "Ready in UI",
+    detail: "Current app can upload files now; JSON-to-thread normalization still needs backend mapping."
+  },
+  {
+    title: "Wearables and CGM",
+    body: "Apple Watch, Fitbit, Dexcom, and Libre should land as heart rate, sleep, steps, glucose, and variability features.",
+    status: "Placeholder",
+    detail: "OAuth flows and vendor APIs are not wired yet, so this remains a product shell."
+  },
+  {
+    title: "PDF, report, image intake",
+    body: "Clinical PDFs, discharge summaries, pathology reports, ECG screenshots, CT/MRI snapshots, and scans flow into one case workspace.",
+    status: "Partially live",
+    detail: "Generic file upload works today. Modality-specific parsing and vision extraction still need backend services."
+  },
+  {
+    title: "EHR export import",
+    body: "FHIR, HL7, CSV, Epic/Cerner exports, labs, meds, and imaging metadata should hydrate the current patient state.",
+    status: "Placeholder",
+    detail: "No hospital connector exists in this repo yet, so this is UI-only for now."
+  }
+];
+
+const DOCTOR_DEPLOYMENT_MODULES = [
+  {
+    title: "Cloud workspace",
+    subtitle: "Google Cloud / AWS / Azure",
+    note: "Best for generalized product use, shared dashboards, and cross-role analytics.",
+    status: "Ready in UI"
+  },
+  {
+    title: "Hospital edge device",
+    subtitle: "DGX / Mac Studio / local server",
+    note: "Designed for zero-cloud PHI leakage with local RAG, vision, and evidence optimization.",
+    status: "Placeholder"
+  },
+  {
+    title: "Offline patient device",
+    subtitle: "Consumer health hardware",
+    note: "Supports personal report review and future on-device health timeline summarization.",
+    status: "Placeholder"
+  }
+];
+
+const DOCTOR_WORKSPACE_MODULES = [
+  {
+    title: "Unified case workspace",
+    body: "Combine patient context, uploaded artifacts, extracted findings, literature, and unresolved questions into one workspace.",
+    status: "Ready in UI"
+  },
+  {
+    title: "Cross-modal grounding",
+    body: "Separate direct observations, document-derived facts, literature-derived claims, and model inference.",
+    status: "Partially live"
+  },
+  {
+    title: "Verifier stack",
+    body: "Citation verifier, scope verifier, trial-status checker, contradiction checker, and missing-context detection.",
+    status: "Ready in UI"
+  },
+  {
+    title: "Response composer",
+    body: "Answer layout should always split case understanding, external evidence, integrated answer, and limitations.",
+    status: "Ready in UI"
+  }
+];
+
+const DOCTOR_AGENT_MODULES = [
+  {
+    title: "Query decomposition",
+    body: "Break compound clinical questions into subclaims for efficacy, safety, subgroup, and trial-status retrieval.",
+    status: "Ready in UI"
+  },
+  {
+    title: "Dual-source retrieval",
+    body: "Pull PubMed and ClinicalTrials together, surface conflicts, and explain whether disagreement comes from PICO mismatch.",
+    status: "Partially live"
+  },
+  {
+    title: "Adaptive retrieval policy",
+    body: "Decide when to expand queries, call guideline sources, abstain, compare answer styles, or ask for preference feedback.",
+    status: "Placeholder"
+  },
+  {
+    title: "Learning loop",
+    body: "Store interaction data, verifier traces, user preference, and outcome proxies for weekly quality iteration.",
+    status: "Placeholder"
+  }
+];
+
+const DOCTOR_SIGNAL_LAYERS = [
+  {
+    label: "Layer A",
+    title: "Interaction data",
+    detail: "Question text, role, specialty, timestamp, query type, and session context."
+  },
+  {
+    label: "Layer B",
+    title: "System trace",
+    detail: "Retrieval candidates, reranker scores, selected evidence, model version, latency, and cost."
+  },
+  {
+    label: "Layer C",
+    title: "User feedback",
+    detail: "Accepted vs rejected, preference A/B, citation helpfulness, overclaim flag, missing evidence flag."
+  },
+  {
+    label: "Layer D",
+    title: "Outcome proxy",
+    detail: "Citation clicks, copied answers, follow-up questions, session return rate, eventual acceptance."
+  }
+];
+
+const DOCTOR_BENCHMARKS = [
+  "Conflict-aware clinical QA benchmark",
+  "Preference-grounded answer selection dataset",
+  "Knowledge-gap discovery from clinical query logs"
 ];
 
 const PHARMA_FILTERS = ["Obesity", "Metabolic disease", "GLP-1", "Phase 3", "Recruiting"];
@@ -322,12 +473,12 @@ function formatUploadTitle(item: UploadItem) {
 function patientRiskTone(text: string) {
   const normalized = text.toLowerCase();
   if (normalized.includes("urgent") || normalized.includes("emergency") || normalized.includes("immediately")) {
-    return { icon: "x", label: "High risk", tone: "high" as const };
+    return { icon: "!", label: "High risk", tone: "high" as const };
   }
   if (normalized.includes("monitor") || normalized.includes("follow up") || normalized.includes("watch")) {
     return { icon: "!", label: "Medium risk", tone: "medium" as const };
   }
-  return { icon: "check", label: "Low risk", tone: "low" as const };
+  return { icon: "✓", label: "Low risk", tone: "low" as const };
 }
 
 function makeSimpleExplanation(text: string) {
@@ -568,6 +719,123 @@ function PlaceholderPanel({ title, note }: { title: string; note: string }) {
       <div className="placeholder-note">{note}</div>
     </section>
   );
+}
+
+function doctorStatusTone(status: string) {
+  if (status === "Ready in UI" || status === "Partially live") {
+    return "good";
+  }
+  if (status === "Placeholder") {
+    return "warn";
+  }
+  return "neutral";
+}
+
+function evidenceSampleLabel(item: EvidenceItem) {
+  return item.sample_size ?? (item.source === "ClinicalTrials.gov" ? "Trial record" : "Not reported");
+}
+
+function evidenceEffectLabel(item: EvidenceItem) {
+  if (item.source === "ClinicalTrials.gov") {
+    return item.phase ?? "Trial record";
+  }
+  return item.effect_size ?? "Not reported";
+}
+
+function evidencePValueLabel(item: EvidenceItem) {
+  if (item.source === "ClinicalTrials.gov") {
+    return item.status ?? "Status unavailable";
+  }
+  return item.p_value ?? "Not reported";
+}
+
+function evidenceLevelLabel(item: EvidenceItem) {
+  return item.evidence_level ?? (item.source === "ClinicalTrials.gov" ? "Trial record" : "Literature");
+}
+
+function sourceHref(item: EvidenceItem) {
+  return item.url ?? null;
+}
+
+const INLINE_ID_PATTERN = /(NCT\d{8})|(PMID[:\s]*\d{4,})/gi;
+
+function hrefForInlineCitation(raw: string): string | null {
+  const trimmed = raw.trim();
+  if (/^NCT\d{8}$/i.test(trimmed)) {
+    return `https://clinicaltrials.gov/study/${trimmed.toUpperCase()}`;
+  }
+  const digits = trimmed.replace(/^PMID[:\s]*/i, "").trim();
+  if (/^\d+$/.test(digits)) {
+    return `https://pubmed.ncbi.nlm.nih.gov/${digits}/`;
+  }
+  return null;
+}
+
+function wrapTitleMatches(segment: string, evidence: EvidenceItem[], keyBase: string): ReactNode[] {
+  if (!segment) {
+    return [];
+  }
+  const candidates = [...evidence]
+    .filter((e) => e.url && e.title && e.title.length >= 12 && segment.includes(e.title))
+    .sort((a, b) => b.title.length - a.title.length);
+  const pick = candidates[0];
+  if (!pick?.title || !pick.url) {
+    return [segment];
+  }
+  const idx = segment.indexOf(pick.title);
+  const before = segment.slice(0, idx);
+  const after = segment.slice(idx + pick.title.length);
+  const restEvidence = evidence.filter((e) => e.id !== pick.id);
+  return [
+    ...wrapTitleMatches(before, evidence, `${keyBase}a`),
+    <a key={`${keyBase}-${pick.id}`} className="inline-citation-link" href={pick.url} target="_blank" rel="noreferrer">
+      {pick.title}
+    </a>,
+    ...wrapTitleMatches(after, restEvidence, `${keyBase}b`)
+  ];
+}
+
+/** PMID / NCT tokens and known evidence titles become outbound links (see Answer Summary and chat bubble). */
+function renderLinkedAnswerText(text: string, evidence: EvidenceItem[] = []): ReactNode {
+  const out: ReactNode[] = [];
+  let key = 0;
+  let last = 0;
+  let match: RegExpExecArray | null;
+  const pattern = new RegExp(INLINE_ID_PATTERN.source, "gi");
+  while ((match = pattern.exec(text)) !== null) {
+    if (match.index > last) {
+      out.push(...wrapTitleMatches(text.slice(last, match.index), evidence, `seg${key++}`));
+    }
+    const raw = match[0];
+    const href = hrefForInlineCitation(raw);
+    out.push(
+      href ? (
+        <a key={`cid-${key++}`} className="inline-citation-link" href={href} target="_blank" rel="noreferrer">
+          {raw}
+        </a>
+      ) : (
+        raw
+      )
+    );
+    last = match.index + raw.length;
+  }
+  if (last < text.length) {
+    out.push(...wrapTitleMatches(text.slice(last), evidence, `seg${key++}`));
+  }
+  if (out.length === 0) {
+    return <>{wrapTitleMatches(text, evidence, "seg0")}</>;
+  }
+  return <>{out}</>;
+}
+
+function pharmaEvidenceSummary(answer: AnswerPayload) {
+  const evidence = answer.supporting_evidence ?? [];
+  const pubmed = evidence.filter((item) => item.source === "PubMed").length;
+  const trials = evidence.filter((item) => item.source === "ClinicalTrials.gov").length;
+  if (!evidence.length) {
+    return "No external evidence retrieved yet.";
+  }
+  return `${pubmed} PubMed source${pubmed === 1 ? "" : "s"} and ${trials} ClinicalTrials.gov record${trials === 1 ? "" : "s"} were retrieved for this question.`;
 }
 
 function App() {
@@ -1058,6 +1326,13 @@ function App() {
       .slice()
       .reverse()
       .find((item) => item.answerPayload)?.answerPayload ?? null;
+  const latestEvidence = latestAnswerPayload?.supporting_evidence ?? [];
+  const pubmedEvidence = latestEvidence.filter((item) => item.source === "PubMed");
+  const trialEvidence = latestEvidence.filter((item) => item.source === "ClinicalTrials.gov");
+  const evidenceStrengthBars =
+    latestAnswerPayload?.visual_data.evidenceStrength.length ? latestAnswerPayload.visual_data.evidenceStrength : null;
+  const evidenceTimeline = latestAnswerPayload?.visual_data.timeline ?? [];
+  const citationCount = latestAnswerPayload?.citations.length ?? 0;
 
   const renderRoleWorkspace = () => {
     if (role === "patient") {
@@ -1138,12 +1413,12 @@ function App() {
             </div>
           </div>
 
-          <div className="patient-disclaimer">
-            This information is only for health education. It cannot replace a doctor’s diagnosis or treatment. Please contact a healthcare professional if you are worried.
-          </div>
-        </section>
-      );
-    }
+	          <div className="patient-disclaimer">
+	            This information is only for health education. It cannot replace a doctor’s diagnosis or treatment. Please contact a healthcare professional if you are worried.
+	          </div>
+	        </section>
+	      );
+	    }
 
     if (role === "doctor") {
       return (
@@ -1170,7 +1445,7 @@ function App() {
                   <div className="panel-kicker">PICO parser</div>
                   <h3>Structured framing</h3>
                 </div>
-                <span className="status-chip">Collapsible</span>
+                <span className="status-chip">Integrated</span>
               </div>
               <div className="pico-grid">
                 {DOCTOR_PICO.map((item) => (
@@ -1180,9 +1455,66 @@ function App() {
                   </div>
                 ))}
               </div>
+
+              <div className="panel-divider" />
+
+              <div className="panel-title-row">
+                <strong>Deployment modes</strong>
+              </div>
+              <div className="stack-list">
+                {DOCTOR_DEPLOYMENT_MODULES.map((item) => (
+                  <div key={item.title} className="soft-row-card compact-row-card">
+                    <div className="row-card-topline">
+                      <strong>{item.title}</strong>
+                      <span className={`module-badge ${doctorStatusTone(item.status)}`}>{item.status}</span>
+                    </div>
+                    <div className="row-card-subtitle">{item.subtitle}</div>
+                    <span>{item.note}</span>
+                  </div>
+                ))}
+              </div>
             </div>
 
             <div className="evidence-main">
+              <div className="panel">
+                <div className="panel-header">
+                  <div>
+                    <div className="panel-kicker">Data layer</div>
+                    <h3>Clinical intake and privacy routing</h3>
+                  </div>
+                  <div className="header-inline-actions">
+                    <span className="status-chip">PHI-aware</span>
+                    <span className="status-chip">Multi-source</span>
+                  </div>
+                </div>
+                <div className="doctor-module-grid">
+                  {DOCTOR_IMPORT_MODULES.map((item) => (
+                    <div key={item.title} className="doctor-module-card">
+                      <div className="row-card-topline">
+                        <strong>{item.title}</strong>
+                        <span className={`module-badge ${doctorStatusTone(item.status)}`}>{item.status}</span>
+                      </div>
+                      <p>{item.body}</p>
+                      <div className="module-detail">{item.detail}</div>
+                    </div>
+                  ))}
+                </div>
+                <div className="doctor-privacy-strip">
+                  <div className="history-snippet">
+                    <strong>De-identification</strong>
+                    <span>UI now reflects PHI stripping and structured evidence retention as a first-class workflow step.</span>
+                  </div>
+                  <div className="history-snippet">
+                    <strong>Session policy</strong>
+                    <span>Files should support session-only retention vs anonymized learning use. Policy is visible; storage controls still need backend.</span>
+                  </div>
+                  <div className="history-snippet">
+                    <strong>Current repo limit</strong>
+                    <span>No real HealthKit, Dexcom, Epic, or local edge deployment exists yet, so those remain explicit placeholders.</span>
+                  </div>
+                </div>
+              </div>
+
               <div className="panel">
                 <div className="panel-header">
                   <div>
@@ -1197,48 +1529,58 @@ function App() {
                 <div className="dual-column">
                   <div className="evidence-column">
                     <div className="column-title">PubMed</div>
-                    {(latestAnswerPayload?.supporting_evidence ?? []).map((item) => (
-                      <div key={item.id} className="doctor-evidence-card">
-                        <div className="evidence-inline-topline">
-                          <span className="source-tag">{item.source}</span>
-                          <span className="evidence-id">{item.id}</span>
-                          <span className="status-tag">{item.evidence_type ?? "RCT"}</span>
-                          <span className="status-tag">n=500</span>
-                          <span className="status-tag">p=0.003</span>
+                    {(pubmedEvidence.length ? pubmedEvidence : latestEvidence).length ? (
+                      (pubmedEvidence.length ? pubmedEvidence : latestEvidence).map((item) => (
+                        <div key={item.id} className="doctor-evidence-card">
+                          <div className="evidence-inline-topline">
+                            <span className="source-tag">{item.source}</span>
+                            <span className="evidence-id">{item.id}</span>
+                            <span className="status-tag">{item.evidence_type ?? "RCT"}</span>
+                            <span className="status-tag">{evidenceSampleLabel(item)}</span>
+                            <span className="status-tag">{evidencePValueLabel(item)}</span>
+                          </div>
+                          <strong>{item.title}</strong>
+                          <p>{item.summary}</p>
+                          <div className="doctor-evidence-footer">
+                            <span className="grade-chip">{evidenceLevelLabel(item)}</span>
+                            <span className="metric-chip">{evidenceEffectLabel(item)}</span>
+                            {item.url ? (
+                              <a href={item.url} target="_blank" rel="noreferrer">
+                                Open source
+                              </a>
+                            ) : null}
+                          </div>
                         </div>
-                        <strong>{item.title}</strong>
-                        <p>{item.summary}</p>
-                        <div className="doctor-evidence-footer">
-                          <span className="grade-chip">Level 1 evidence</span>
-                          <span className="metric-chip">HR 0.72</span>
-                          {item.url ? (
-                            <a href={item.url} target="_blank" rel="noreferrer">
-                              Open source
-                            </a>
-                          ) : null}
-                        </div>
-                      </div>
-                    ))}
+                      ))
+                    ) : (
+                      <div className="placeholder-note">No evidence run yet. Once a query finishes, PubMed papers will populate here.</div>
+                    )}
                   </div>
 
                   <div className="evidence-column">
                     <div className="column-title">ClinicalTrials</div>
-                    {(latestAnswerPayload?.supporting_evidence ?? []).map((item) => (
-                      <div key={`${item.id}-trial`} className="doctor-evidence-card trial">
-                        <div className="evidence-inline-topline">
-                          <span className="source-tag">ClinicalTrials</span>
-                          <span className="evidence-id">{item.id.replace("PMID", "NCT")}</span>
-                          <span className="status-tag">{item.phase ?? "Phase 3"}</span>
-                          <span className="status-tag">{item.status ?? "Recruiting"}</span>
+                    {trialEvidence.length ? (
+                      trialEvidence.map((item) => (
+                        <div key={`${item.id}-trial`} className="doctor-evidence-card trial">
+                          <div className="evidence-inline-topline">
+                            <span className="source-tag">ClinicalTrials</span>
+                            <span className="evidence-id">{item.id.replace("PMID", "NCT")}</span>
+                            <span className="status-tag">{item.phase ?? "Phase 3"}</span>
+                            <span className="status-tag">{item.status ?? "Recruiting"}</span>
+                          </div>
+                          <strong>{item.title}</strong>
+                          <p>Population, intervention, recruitment state, and endpoints sit here with provenance-ready trial metadata.</p>
+                          <div className="doctor-evidence-footer">
+                            <span className="metric-chip">{evidencePValueLabel(item)}</span>
+                            <span className="metric-chip">{evidenceLevelLabel(item)}</span>
+                          </div>
                         </div>
-                        <strong>{item.title}</strong>
-                        <p>Population, intervention, recruitment state, and endpoints sit here with provenance-ready trial metadata.</p>
-                        <div className="doctor-evidence-footer">
-                          <span className="metric-chip">Primary endpoint: weight loss</span>
-                          <span className="metric-chip">Adults with obesity + T2D</span>
-                        </div>
-                      </div>
-                    ))}
+                      ))
+                    ) : latestEvidence.length ? (
+                      <div className="placeholder-note">This run returned literature evidence, but no linked ClinicalTrials records yet.</div>
+                    ) : (
+                      <div className="placeholder-note">No trial retrieval yet. Recruitment state, phase, and endpoint metadata will appear here after a run.</div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1248,11 +1590,11 @@ function App() {
                   <div className="panel-kicker">Evidence strength</div>
                   <h3>Strength bar</h3>
                   <div className="bar-stack">
-                    {[5, 4, 3, 2, 1].map((level) => (
-                      <div key={level} className="bar-row">
-                        <span>Level {level}</span>
+                    {(evidenceStrengthBars ?? [5, 4, 3, 2, 1].map((level) => ({ label: `Level ${level}`, value: 18 * level }))).map((item) => (
+                      <div key={item.label} className="bar-row">
+                        <span>{item.label}</span>
                         <div className="bar-track">
-                          <div className="bar-fill evidence" style={{ width: `${18 * level}%` }} />
+                          <div className="bar-fill evidence" style={{ width: `${item.value}%` }} />
                         </div>
                       </div>
                     ))}
@@ -1277,14 +1619,21 @@ function App() {
                 </div>
 
                 <div className="panel">
-                  <div className="panel-kicker">Forest plot / evidence graph</div>
-                  <h3>Effect consistency</h3>
+                  <div className="panel-kicker">Provenance mix</div>
+                  <h3>Observed vs inferred</h3>
                   <div className="forest-plot">
-                    {[62, 48, 72, 39].map((width, index) => (
-                      <div key={width} className="forest-row">
-                        <span>Study {index + 1}</span>
+                    {(evidenceTimeline.length
+                      ? evidenceTimeline
+                      : [
+                          { label: "Uploaded material", value: 64 },
+                          { label: "External evidence", value: 82 },
+                          { label: "Integrated synthesis", value: 56 },
+                          { label: "Uncertainty exposed", value: 71 }
+                        ]).map((item) => (
+                      <div key={item.label} className="forest-row">
+                        <span>{item.label}</span>
                         <div className="forest-line">
-                          <div className="forest-point" style={{ left: `${width}%` }} />
+                          <div className="forest-point" style={{ left: `${item.value}%` }} />
                         </div>
                       </div>
                     ))}
@@ -1295,30 +1644,97 @@ function App() {
               <div className="panel">
                 <div className="panel-header">
                   <div>
-                    <div className="panel-kicker">Case workbench</div>
-                    <h3>EHR and multimodal review</h3>
+                    <div className="panel-kicker">Multimodal workspace</div>
+                    <h3>Case understanding, verification, and response structure</h3>
                   </div>
+                  <div className="header-inline-actions">
+                    <span className="status-chip">{latestEvidence.length} evidence items</span>
+                    <span className="status-chip">{citationCount} citations</span>
+                  </div>
+                </div>
+                <div className="doctor-module-grid">
+                  {DOCTOR_WORKSPACE_MODULES.map((item) => (
+                    <div key={item.title} className="doctor-module-card">
+                      <div className="row-card-topline">
+                        <strong>{item.title}</strong>
+                        <span className={`module-badge ${doctorStatusTone(item.status)}`}>{item.status}</span>
+                      </div>
+                      <p>{item.body}</p>
+                    </div>
+                  ))}
                 </div>
                 <div className="doctor-workbench">
                   <div className="workbench-card">
-                    <strong>Imported data</strong>
-                    <span>PDF, image, and voice parsing ready</span>
+                    <strong>Imported artifacts</strong>
+                    <span>Clinical note, pathology, PDF, ECG image, CT/MRI screenshot, and paper supplement should land in one case thread.</span>
                   </div>
                   <div className="workbench-card">
-                    <strong>Auto summary</strong>
-                    <span>Age, history, labs, and risk points extracted</span>
+                    <strong>Clinical state</strong>
+                    <span>Diagnoses, symptoms, meds, labs, imaging findings, timeline, and uncertainty tags should share one schema.</span>
                   </div>
                   <div className="workbench-card danger-card">
                     <strong>Uncertainty + hedging score</strong>
-                    <span>Score 6 / 10. Small sample, subgroup mismatch, short follow-up.</span>
+                    <span>Score 6 / 10. Small sample, subgroup mismatch, short follow-up, and incomplete trial-status linkage.</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="dual-column">
+                <div className="panel">
+                  <div className="panel-header">
+                    <div>
+                      <div className="panel-kicker">Agent layer</div>
+                      <h3>Retrieval policy and verifier workflow</h3>
+                    </div>
+                  </div>
+                  <div className="stack-list">
+                    {DOCTOR_AGENT_MODULES.map((item) => (
+                      <div key={item.title} className="soft-row-card compact-row-card">
+                        <div className="row-card-topline">
+                          <strong>{item.title}</strong>
+                          <span className={`module-badge ${doctorStatusTone(item.status)}`}>{item.status}</span>
+                        </div>
+                        <span>{item.body}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="panel">
+                  <div className="panel-header">
+                    <div>
+                      <div className="panel-kicker">Learning flywheel</div>
+                      <h3>Signals, benchmarks, and product moat</h3>
+                    </div>
+                  </div>
+                  <div className="stack-list">
+                    {DOCTOR_SIGNAL_LAYERS.map((item) => (
+                      <div key={item.label} className="soft-row-card compact-row-card">
+                        <div className="row-card-topline">
+                          <strong>{item.title}</strong>
+                          <span className="ghost-badge">{item.label}</span>
+                        </div>
+                        <span>{item.detail}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="benchmark-strip">
+                    {DOCTOR_BENCHMARKS.map((item) => (
+                      <span key={item} className="citation-pill">
+                        {item}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="placeholder-note">
+                    Benchmark generation, expert annotation, weekly fine-tune loops, and owner-facing monitoring dashboards need backend jobs and data pipelines that are not present in this repo yet.
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </section>
-      );
-    }
+	        </section>
+	      );
+	    }
 
     if (role === "pharma") {
       return (
@@ -1564,16 +1980,17 @@ function App() {
     }
 
     const answer = message.answerPayload;
+    const supportingEvidence = answer.supporting_evidence ?? [];
+    const citations = answer.citations ?? [];
+    const claimCitations = answer.claim_citations ?? [];
+    const verifierNotes = answer.verifier_notes ?? [];
+    const safetyNotes = answer.safety_notes ?? [];
 
     if (role === "patient") {
       const risk = patientRiskTone(answer.uncertainty_note);
       return (
         <div className="assistant-panels patient-answer">
           <div className="patient-answer-grid">
-            <div className="mini-panel hero-panel">
-              <div className="mini-panel-title">Answer Summary</div>
-              <p className="large-copy">{answer.direct_answer}</p>
-            </div>
             <div className={`mini-panel risk-panel ${risk.tone}`}>
               <div className="mini-panel-title">Risk</div>
               <div className="risk-line">
@@ -1609,8 +2026,29 @@ function App() {
           </div>
 
           <details className="mini-panel collapsible-panel">
-            <summary className="mini-panel-title">Evidence (optional, collapsed)</summary>
-            <p>Related health research suggests this guidance, but the technical details are hidden in patient view.</p>
+            <summary className="mini-panel-title">Evidence Sources (optional)</summary>
+            {supportingEvidence.length ? (
+              <div className="stack-list">
+                {supportingEvidence.map((item) => (
+                  <div key={`${message.id}-${item.id}-patient`} className="soft-row-card compact-row-card">
+                    <div className="row-card-topline">
+                      <strong>{item.id}</strong>
+                      <span className="ghost-badge">{item.source}</span>
+                    </div>
+                    <span>{item.title}</span>
+                    {sourceHref(item) ? (
+                      <a className="mini-link" href={sourceHref(item) ?? undefined} target="_blank" rel="noreferrer">
+                        Open paper or trial record
+                      </a>
+                    ) : (
+                      <span>Link unavailable</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p>Related health research suggests this guidance, but no source links are available for this answer yet.</p>
+            )}
           </details>
         </div>
       );
@@ -1621,32 +2059,85 @@ function App() {
         <div className="assistant-panels">
           <div className="assistant-role-brief">{answer.role_brief}</div>
           <div className="mini-panel">
-            <div className="mini-panel-title">Direct Answer</div>
-            <p>{answer.direct_answer}</p>
-          </div>
-          <div className="mini-panel">
             <div className="mini-panel-title">Limitations</div>
             <p>{answer.uncertainty_note}</p>
           </div>
+          {verifierNotes.length ? (
+            <div className="mini-panel">
+              <div className="mini-panel-title">Verifier Notes</div>
+              <ul className="plain-list compact">
+                {verifierNotes.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {safetyNotes.length ? (
+            <div className="mini-panel">
+              <div className="mini-panel-title">Safety Boundaries</div>
+              <ul className="plain-list compact">
+                {safetyNotes.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
           <div className="mini-panel">
             <div className="mini-panel-title">Evidence Table</div>
-            <div className="doctor-table">
-              {answer.supporting_evidence.map((item) => (
-                <div key={`${message.id}-${item.id}`} className="doctor-table-row">
-                  <span>{item.id}</span>
-                  <span>{item.evidence_type ?? "RCT"}</span>
-                  <span>n=500</span>
-                  <span>HR 0.72</span>
-                  <span>p=0.003</span>
-                  <span>Level 1</span>
+            <div className="doctor-table-wrap">
+              <table className="doctor-evidence-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Source ID</th>
+                    <th scope="col">Type</th>
+                    <th scope="col">Sample size</th>
+                    <th scope="col">Effect size / phase</th>
+                    <th scope="col">p-value / status</th>
+                    <th scope="col">Evidence level</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {supportingEvidence.map((item) => (
+                    <tr key={`${message.id}-${item.id}`}>
+                      <td>
+                        {sourceHref(item) ? (
+                          <a className="inline-citation-link" href={sourceHref(item) ?? undefined} target="_blank" rel="noreferrer">
+                            {item.id}
+                          </a>
+                        ) : (
+                          item.id
+                        )}
+                      </td>
+                      <td>{item.evidence_type ?? "Evidence"}</td>
+                      <td>{evidenceSampleLabel(item)}</td>
+                      <td>{evidenceEffectLabel(item)}</td>
+                      <td>{evidencePValueLabel(item)}</td>
+                      <td>{evidenceLevelLabel(item)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div className="mini-panel">
+            <div className="mini-panel-title">Grounding Snippets</div>
+            <div className="stack-list">
+              {claimCitations.map((citation) => (
+                <div key={`${citation.source_id}-${citation.snippet}`} className="soft-row-card compact-row-card">
+                  <div className="row-card-topline">
+                    <strong>{citation.source_id}</strong>
+                    <span className="ghost-badge">{citation.section ?? citation.support_type}</span>
+                  </div>
+                  <span>{citation.title}</span>
+                  <span>"{citation.snippet}"</span>
                 </div>
               ))}
             </div>
           </div>
           <div className="mini-panel">
-            <div className="mini-panel-title">Claim-level citations</div>
+            <div className="mini-panel-title">Source IDs</div>
             <div className="citation-strip">
-              {answer.citations.map((citation) => (
+              {citations.map((citation) => (
                 <span key={citation} className="citation-pill">
                   {citation}
                 </span>
@@ -1661,8 +2152,8 @@ function App() {
       return (
         <div className="assistant-panels">
           <div className="mini-panel">
-            <div className="mini-panel-title">Landscape Summary</div>
-            <p>{answer.direct_answer}</p>
+            <div className="mini-panel-title">Evidence Posture</div>
+            <p>{pharmaEvidenceSummary(answer)}</p>
           </div>
           <div className="mini-panel">
             <div className="mini-panel-title">Signals to watch</div>
@@ -1684,7 +2175,20 @@ function App() {
           <div className="mini-panel">
             <div className="mini-panel-title">Sources and placeholders</div>
             <p>{answer.uncertainty_note}</p>
-            <div className="placeholder-note">No data yet — will be populated from aggregated queries</div>
+            <div className="citation-strip">
+              {supportingEvidence.slice(0, 6).map((item) =>
+                sourceHref(item) ? (
+                  <a key={`${message.id}-${item.id}-pharma`} className="citation-pill citation-link" href={sourceHref(item) ?? undefined} target="_blank" rel="noreferrer">
+                    {item.id}
+                  </a>
+                ) : (
+                  <span key={`${message.id}-${item.id}-pharma`} className="citation-pill">
+                    {item.id}
+                  </span>
+                )
+              )}
+            </div>
+            <div className="placeholder-note">Aggregation, competitive benchmarking, and demand telemetry still need product analytics pipelines.</div>
           </div>
         </div>
       );
@@ -1692,10 +2196,6 @@ function App() {
 
     return (
       <div className="assistant-panels">
-        <div className="mini-panel">
-          <div className="mini-panel-title">Monitoring Summary</div>
-          <p>{answer.direct_answer}</p>
-        </div>
         <div className="mini-panel">
           <div className="mini-panel-title">Quality watch</div>
           <p>{answer.uncertainty_note}</p>
@@ -1917,7 +2417,11 @@ function App() {
                         <span>{message.sender === "assistant" ? "CareProof" : activeUser.name}</span>
                         <span>{formatTimestamp(message.createdAt)}</span>
                       </div>
-                      <div className="message-text">{message.text}</div>
+                      <div className="message-text">
+                        {message.sender === "assistant" && message.answerPayload
+                          ? renderLinkedAnswerText(message.text, message.answerPayload.supporting_evidence ?? [])
+                          : message.text}
+                      </div>
 
                       {message.uploads && message.uploads.length > 0 ? (
                         <div className="message-uploads">
